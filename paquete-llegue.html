@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>PaqueteLlegue</title>
+</head>
+
+<body onload="alCargar();calculoGeneral(new Date());">
+
+    <h1>PaqueteLlegue</h1>
+    <h2>Calculadora de días para el arribo de una compra en línea</h2><br>
+
+
+    <table>
+        <tr>
+            <th style="width: 30%;">Numero de días de transito de paquetería (pronosticados):</th>
+            <th style="width: 30%;">Días a omitir (varía por paquetería):<br><input type="checkbox" name="omitir" id="omitir" value="Bike" checked=true onchange="funcionCambio(this)">festivos</th>
+            <th style="width: 30%;">Referencia del día (algunos paquetes se envian el mismo día en una compra antes de las 12):</th>
+        </tr>
+        <tr>
+            <td>
+                <center>
+                    <select name="dias" id="dias" size=3 autofocus onchange="funcionCambio(this)" style="width: 100%;">
+   		<option value="0" selected >5 dias</option> 
+   		<option value="1">3 dias</option> 
+		<option value="2">Especificar:</option>
+	</select>
+
+                </center>
+            </td>
+            <td>
+                <center>
+                    <select name="trabajados" id="trabajados" size=3 onchange="funcionCambio(this)" style="width: 100%;">
+   			<option value="0" selected >Domingos (6 dias efectivos)</option> 
+   			<option value="1">Sabados y Domingos (5 dias efectivos)</option> 
+			<option value="2">Ninguno (dias naturales)</option> 
+		</select>
+                </center>
+            </td>
+            <td>
+                <center>
+                    <select name="doce" id="doce" size=3 onchange="funcionCambio(this)" style="width: 100%;">
+   			<option value="0" selected >Despues de 12</option> 
+   			<option value="1">Antes de 12</option> 
+		</select>
+                </center>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <center>
+                    <input type="number" name="especificar" id="especificar" value="5" oninput="funcionCambio(this)" style="width: 30%;">dias
+                </center>
+            </td>
+            <td>
+                <center>
+                    <input type="range" name="rango" id="rango" list="lista" value="0" max="7" min="-7" oninput="funcionCambio(this)" style="width: 100%;"><br>
+                    <datalist id="lista">
+			<option value="0" label="Hoy">
+		</datalist>
+                </center>
+            </td>
+            <td>
+                <center>
+                    <button type="button" onclick="document.getElementById('rango').value='0';funcionCambio(this)">Reset</button>
+                </center>
+            </td>
+        </tr>
+
+    </table>
+
+    <br><br>
+
+
+    <table>
+        <tr>
+            <th style="width: 30%;">Se compra el día:</th>
+            <th style="width: 30%;">Se envia el día:</th>
+            <th style="width: 30%;">Se entrega el día:</th>
+
+        </tr>
+
+        <td>
+            <center>
+                <input type="text" size="30" name="fechaReferencia" id="fechaReferencia" value="" readonly>
+            </center>
+        </td>
+        <td>
+            <center>
+                <input type="text" size="30" name="fechaEnvio" id="fechaEnvio" value="" readonly>
+            </center>
+        </td>
+        <td>
+            <center>
+                <input type="text" size="30" name="resultado" id="resultado" value="" readonly>
+            </center>
+        </td>
+        <table>
+
+
+            <div>
+                <br><br>
+                <h3>Festivos considerados:</h3>
+            </div>
+
+            <ul id="miUL">
+            </ul>
+
+            <script>
+                var festivos = [];
+                //***************************************FECHAS FESTIVAS (MODIFICAR ACA)***************************************
+                //FECHA DEBE INGRESARSE CON ESTE FORMATO, NO IMPORTA EL ORDEN, NO IMPORTA SI EXISTIERAN REPETIDOS.
+
+                //festivos.push(new Date("yyyy", "mm", "dd"));
+                //00 = ENERO / 11 = DICIEMBRE
+                festivos.push(new Date(2022, 00, 01));
+                festivos.push(new Date(2022, 01, 05));
+                festivos.push(new Date(2022, 02, 21));
+                festivos.push(new Date(2022, 03, 15));
+                festivos.push(new Date(2022, 04, 01));
+                festivos.push(new Date(2022, 08, 16));
+                festivos.push(new Date(2022, 10, 21));
+                festivos.push(new Date(2022, 11, 25));
+                festivos.push(new Date(2022, 11, 25));
+                //***************************************FECHAS FESTIVAS (MODIFICAR ACA)***************************************
+
+                var diaNombre = new Array(7);
+                diaNombre[0] = "Domingo";
+                diaNombre[1] = "Lunes";
+                diaNombre[2] = "Martes";
+                diaNombre[3] = "Miercoles";
+                diaNombre[4] = "Jueves";
+                diaNombre[5] = "Viernes";
+                diaNombre[6] = "Sabado";
+
+                var mesNombre = new Array(12);
+                mesNombre[0] = "Enero";
+                mesNombre[1] = "Febrero";
+                mesNombre[2] = "Marzo";
+                mesNombre[3] = "Abril";
+                mesNombre[4] = "Mayo";
+                mesNombre[5] = "Junio";
+                mesNombre[6] = "Julio";
+                mesNombre[7] = "Agosto";
+                mesNombre[8] = "Septiembre";
+                mesNombre[9] = "Octubre";
+                mesNombre[10] = "Noviembre";
+                mesNombre[11] = "Diciembre";
+
+
+                var opciones = {
+                    dias: 0,
+                    trabajados: 0,
+                    antesDeDoce: false,
+                    omitir: false,
+                    diasMenos: -7,
+                    indiceFestivos: 0
+                };
+
+                //FUNCION QUE SE EJECUTA AL INICIO Y QUE REALIZA EL DESPLIEGUE DE LAS FECHAS FESTIVAS LISTANDOLAS EN PANTALLA	
+                function alCargar() {
+                    var hoy = new Date();
+                    var cadena = "";
+                    var newList;
+                    var newContent;
+                    var newListItem;
+
+                    ordenFestivos(hoy, opciones.diasMenos)
+
+                    if (hoy.getHours() < 12) {
+                        document.getElementById("doce").value = "1";
+                        opciones.antesDeDoce = true;
+                    };
+
+                    document.getElementById("fechaReferencia").value = diaNombre[hoy.getDay()] + ", " + hoy.getDate() + " de " + mesNombre[hoy.getMonth()] + " del " + hoy.getFullYear();
+                    for (var j = 0; j < festivos.length; j++) {
+                        cadena = festivos[j].getFullYear() + ", " + mesNombre[festivos[j].getMonth()] + " " + festivos[j].getDate() + ", " + diaNombre[festivos[j].getDay()];
+                        newContent = document.createTextNode(cadena);
+                        newListItem = document.createElement("li");
+                        newListItem.setAttribute("id", "li" + j);
+                        newListItem.setAttribute("style", "font-weight: normal");
+                        newList = document.getElementById("miUL");
+                        newListItem.appendChild(newContent);
+                        newList.appendChild(newListItem);
+                    };
+
+                };
+
+
+                //FUNCION QUE ORDENA LAS FECHAS EN EL ARREGLO DE FESTIVOS DE MENOR A MAYOR, DESPRECIA LAS FECHAS PASADAS Y REPETIDAS EN RELACION A LA FECHA ENVIADA
+                // ENVIAR -7 DIAS (O LOS REQUERIDOS) PARA LA BARRA DE DESPLAZAMIENTO (intervaloParam), EJECUTAR AL CARGAR!
+                function ordenFestivos(fechaParam, intervaloParam) {
+                    var corta = new Date(fechaParam.getFullYear(), fechaParam.getMonth(), fechaParam.getDate() + intervaloParam);
+                    var bufferArray = [];
+
+                    /////////ORDENA EL ARREGLO
+                    for (var i = 0; i < (festivos.length); i++) {
+                        if (parseInt((festivos[i] - corta) / (1000 * 60 * 60 * 24)) < 0) {
+                            bufferArray.push(i);
+                        };
+                    };
+                    for (var i = bufferArray.length - 1; i >= 0; i--) {
+                        festivos.splice(bufferArray[i], 1)
+                    };
+                    festivos.sort(function(a, b) {
+                        return a - b
+                    });
+
+                    ////////ELIMINA REPETIDAS DEL ARREGLO
+                    bufferArray = [];
+                    for (var i = 0; i < festivos.length - 1; i++) {
+                        if (festivos[i].toDateString() != festivos[i + 1].toDateString()) {
+                            bufferArray.push(festivos[i])
+                        }
+                    }
+                    bufferArray.push(festivos[festivos.length - 1]);
+                    festivos = bufferArray;
+                    if (festivos[0] == undefined) festivos[0] = (new Date(new Date().getFullYear(new Date()) + 1, 00, 01));
+                };
+
+                //FUNCION QUE CALCULA FECHA DE ENVIO Y FECHA DE ENTREGA, ADEMAS DE DESPLEGARLAS, ESO ES LOGRADO POR MEDIO DE TRES ETAPAS
+                function calculoGeneral(fechaGeneral) {
+                    var _M_conteoGeneral = 0;
+                    var _A_elemento;
+                    var _C_fechaCorta = {};
+                    var _7_conteoDias = 1;
+                    var _5_respuestaFestiva = 0;
+                    var _D_expresion;
+                    var _E_terminarWhile;
+
+                    for (var i = 0; i < festivos.length; i++) {
+                        _A_elemento = document.getElementById("li" + i);
+                        _A_elemento.setAttribute("style", "font-weight: normal");
+                    };
+
+                    /////////PREVIO:ANTES DE DOCE?
+                    if (opciones.antesDeDoce == false) {
+                        _M_conteoGeneral++;
+                        if (calculoFestivos(fechaGeneral, 0) == 0 && opciones.omitir == false) {
+                            _A_elemento = document.getElementById("li" + (opciones.indiceFestivos - 1));
+                            _A_elemento.setAttribute("style", "font-weight: bold");
+                        };
+                    };
+
+                    /////////ETAPA1 (ciclo1):CON VENDEDOR HASTA SU ENVIO
+
+                    /////////ETAPA2 (ciclo2):EN TRANSITO
+
+                    /////////ETAPA3 (ciclo3):EN PAQUETERIA LOCAL HASTA LA ENTREGA A DESTINO
+
+                    for (var etapa = 1; etapa <= 3; etapa++) {
+                        _E_terminarWhile = false;
+
+                        ////////////////ETAPAS
+                        while (!_E_terminarWhile) {
+                            _C_fechaCorta.general = new Date(fechaGeneral.getFullYear(), fechaGeneral.getMonth(), fechaGeneral.getDate() + _M_conteoGeneral);
+                            _C_fechaCorta.getFullYear = _C_fechaCorta.general.getFullYear();
+                            _C_fechaCorta.getMonth = _C_fechaCorta.general.getMonth();
+                            _C_fechaCorta.getDate = _C_fechaCorta.general.getDate();
+                            _C_fechaCorta.getDay = _C_fechaCorta.general.getDay();
+
+                            if (opciones.indiceFestivos >= 0) {
+                                _5_respuestaFestiva = calculoFestivos(_C_fechaCorta.general, 0)
+                            } else {
+                                _5_respuestaFestiva = -1;
+                            };
+
+                            switch (etapa) {
+                                case 1:
+                                    _D_expresion =
+                                        //SEIS DIAS EFECTIVOS SELECCIONADOS & ES DIA DOMINGO O DIA SABADO
+                                        opciones.trabajados == 0 && _C_fechaCorta.getDay == 0 ||
+                                        opciones.trabajados == 0 && _C_fechaCorta.getDay == 6 ||
+                                        //CINCO DIAS EFECTIVOS SELECCIONADOS & ES DIA DOMINGO O DIA SABADO
+                                        opciones.trabajados == 1 && _C_fechaCorta.getDay == 0 ||
+                                        opciones.trabajados == 1 && _C_fechaCorta.getDay == 6 ||
+                                        _5_respuestaFestiva == 0 && opciones.omitir == false;
+                                    break;
+                                case 2:
+                                    _D_expresion =
+                                        //SEIS DIAS EFECTIVOS SELECCIONADOS & ES DIA DOMINGO
+                                        opciones.trabajados == 0 && _C_fechaCorta.getDay == 0 ||
+                                        //CINCO DIAS EFECTIVOS SELECCIONADOS & ES DIA DOMINGO O DIA SABADO
+                                        opciones.trabajados == 1 && _C_fechaCorta.getDay == 0 ||
+                                        opciones.trabajados == 1 && _C_fechaCorta.getDay == 6 ||
+                                        _5_respuestaFestiva == 0 && opciones.omitir == false;
+                                    break;
+
+                                case 3:
+                                    _D_expresion =
+                                        //SEIS DIAS EFECTIVOS SELECCIONADOS & ES DIA DOMINGO
+                                        opciones.trabajados == 0 && _C_fechaCorta.getDay == 0 ||
+                                        //CINCO DIAS EFECTIVOS SELECCIONADOS & ES DIA DOMINGO O DIA SABADO
+                                        opciones.trabajados == 1 && _C_fechaCorta.getDay == 0 ||
+                                        opciones.trabajados == 1 && _C_fechaCorta.getDay == 6 ||
+                                        _5_respuestaFestiva == 0 && opciones.omitir == false;
+                                    break;
+                            };
+
+                            if (_D_expresion) {
+                                if (_5_respuestaFestiva == 0 && opciones.omitir == false && (opciones.indiceFestivos) > 0) {
+                                    _A_elemento = document.getElementById("li" + (opciones.indiceFestivos - 1));
+                                    _A_elemento.setAttribute("style", "font-weight: bold");
+                                };
+                            } else {
+                                switch (etapa) {
+                                    case 1:
+                                        document.getElementById("fechaEnvio").value = diaNombre[_C_fechaCorta.getDay] + ", " + _C_fechaCorta.getDate + " de " + mesNombre[_C_fechaCorta.getMonth] + " del " + _C_fechaCorta.getFullYear;
+                                        _E_terminarWhile = true;
+                                        break;
+                                    case 2:
+                                        _A_elemento = parseInt(document.getElementById("especificar").value);
+                                        if (isNaN(_A_elemento) || _A_elemento < 1) {
+                                            _A_elemento = 1;
+                                            document.getElementById("especificar").value = 1;
+                                        };
+                                        if (_7_conteoDias >= _A_elemento) {
+                                            _E_terminarWhile = true;
+                                            break;
+                                        };
+                                        _7_conteoDias++;
+                                        break;
+
+                                    case 3:
+                                        //RESETEO DE PUNTERO
+                                        opciones.indiceFestivos = 0;
+                                        document.getElementById("resultado").value = diaNombre[_C_fechaCorta.getDay] + ", " + _C_fechaCorta.getDate + " de " + mesNombre[_C_fechaCorta.getMonth] + " del " + _C_fechaCorta.getFullYear;
+                                        _E_terminarWhile = true;
+                                        break;
+                                }
+
+                            };
+                            _M_conteoGeneral++;
+                        }; //Del while(!_E_terminarWhile)
+                    }; //Del for (var etapa=1;etapa<=3;etapa++)
+
+                };
+
+
+                //FUNCION QUE REVISA SI ES FESTIVA LA FECHA ENVIADA, SI COINCIDE, INCREMENTA EL PUNTERO INDICE, SE DEBE RESETAR MANUALMENTE EL PUNTERO AL TERMINAR.
+                // EL PUNTERO ES opciones.indiceFestivos;
+
+                function calculoFestivos(fechaParam, intervaloParam) {
+                    var corta = new Date(fechaParam.getFullYear(), fechaParam.getMonth(), fechaParam.getDate() + intervaloParam);
+                    var calculo = 0;
+                    var terminarWhile = false;
+                    do {
+                        if (opciones.indiceFestivos >= festivos.length) {
+                            opciones.indiceFestivos = -1; //FESTIVOS TERMINADOS
+                            return -1; //REGRESA MENOS UNO CUANDO YA SE ITERO SOBRE TODAS LAS FECHAS FESTIVAS
+                        };
+                        calculo = parseInt((festivos[opciones.indiceFestivos] - corta) / (1000 * 60 * 60 * 24));
+                        if (calculo == 0) {
+                            opciones.indiceFestivos++;
+                            return 0; //REGRESA CERO CUANDO ES FESTIVA LA FECHA ENVIADA A LA FUNCION
+                        };
+                        if (calculo > 0) {
+                            return 1; //REGRESA UNO CUANDO NO ES FESTIVA LA FECHA ENVIADA A LA FUNCION
+                        };
+                        if (calculo < 0) {
+                            opciones.indiceFestivos++;
+                        };
+                    } while (calculo < 0)
+
+                };
+
+                //FUNCION QUE DETECTA CAMBIOS EN LOS ELEMENTOS HTML Y REALIZA LA ACTUALIZACION DE LA INFO
+                function funcionCambio(_A_elemento) {
+                    var hoy = new Date();
+                    var fechaBarra;
+
+                    switch (_A_elemento.name) {
+                        /////////////////////////NUMERO DE DIAS
+                        case "dias":
+                            switch (_A_elemento.value) {
+                                case "0":
+                                    opciones.dias = 0;
+                                    document.getElementById("especificar").value = 5;
+                                    break;
+                                case "1":
+                                    opciones.dias = 1;
+                                    document.getElementById("especificar").value = 3;
+                                    break;
+                                case "2":
+                                    opciones.dias = 2;
+                                    document.getElementById("especificar").value = "";
+                                    break;
+                            };
+                            break;
+                            /////////////////////////6 DIAS HABILES, 5 DIAS HABILES O NATURALES
+                        case "trabajados":
+                            switch (_A_elemento.value) {
+                                case "0":
+                                    opciones.trabajados = 0;
+                                    break;
+                                case "1":
+                                    opciones.trabajados = 1;
+                                    break;
+                                case "2":
+                                    opciones.trabajados = 2;
+                                    break;
+                            };
+                            break;
+                            /////////////////////////DESPUES DE LAS DOCE?
+                        case "doce":
+                            switch (_A_elemento.value) {
+                                case "0":
+                                    opciones.antesDeDoce = false;
+                                    break;
+                                case "1":
+                                    opciones.antesDeDoce = true;
+                                    break;
+
+                            };
+
+                            break;
+                            /////////////////////////ESPECIFICAR DIAS
+                        case "especificar":
+                            document.getElementById("dias").value = 2;
+                            break;
+                            /////////////////////////OMITIR FESTIVOS
+                        case "omitir":
+                            if (_A_elemento.checked == true) {
+                                opciones.omitir = false;
+                            } else {
+                                opciones.omitir = true;
+                            };
+                            break;
+                    };
+                    fechaBarra = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + parseInt(document.getElementById("rango").value));
+                    document.getElementById("fechaReferencia").value = diaNombre[fechaBarra.getDay()] + ", " + fechaBarra.getDate() + " de " + mesNombre[fechaBarra.getMonth()] + " del " + fechaBarra.getFullYear();
+                    calculoGeneral(fechaBarra);
+                };
+            </script>
+
+</body>
+
+</html>
